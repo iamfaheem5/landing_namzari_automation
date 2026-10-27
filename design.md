@@ -184,6 +184,11 @@ Inside: optional `.icon` (32px circle, glass, 1px border, symbol glyph), `h3` 16
 Cards are **not** links currently; if made clickable, hover should be a border brightening
 (`rgba(255,255,255,0.16)`), not transform/scale.
 
+Tool cards (`.tool-card`) use a 240px minimum height, 20px/590 `h2` title, and a bottom-aligned
+monochrome "Coming soon" pill until the individual tool is available. Available tools use the filled
+"Open tool" button. The NID extractor uses a dashed upload dropzone, compact export-spec panel,
+2-column result cards, and local OpenCV/YuNet processing; exports are 300×300 JPEGs under 300 KB.
+
 ### Section head
 
 ```html
@@ -241,9 +246,10 @@ Government of Bangladesh or land.gov.bd." — **required on every page that mark
 
 Nav: brand mark (28px white circle, black "M", 700 weight) + name 15px/590; links 13px muted with
 pill hover; right side small glass + filled CTA. Links point to section anchors (`#product`, `#bugs`,
-`#how`, `#experience`, `#contact`).
+`#how`, `#experience`, `#contact`) and the `/tools` page. On secondary pages, anchor links use the
+`/#section` form and the current page has `aria-current="page"`.
 Footer: top border `rgb(35,37,42)`, brand block + one-line positioning + location, pill link row,
-then 12px faint copyright. Keep footer links to section anchors only.
+then 12px faint copyright. Keep footer links to section anchors and `/tools`.
 
 ---
 
@@ -299,6 +305,8 @@ primary CTAs 44px; nav/footer links have 12px horizontal padding.
 src/
   layouts/Base.astro      # <head>, fonts, global.css import, slot
   pages/index.astro       # landing page sections in narrative order
+  pages/tools.astro       # document tools directory
+  pages/tools/photo-extraction.astro # private NID portrait extractor
   styles/global.css       # tokens + all component classes
 public/favicon.svg        # white circle "M" mark
 astro.config.mjs          # static output
@@ -311,7 +319,7 @@ Before committing a change:
 3. Keep contact details exactly: WhatsApp `01400133142` / `https://wa.me/8801400133142`,
    email `contact@nazariautomation.xyz`.
 4. Keep the "not affiliated" disclaimer on marketing pages.
-5. Run `npm run build` — must complete with the single static route `/`.
+5. Run `npm run build` — must complete with the static routes `/`, `/tools`, and `/tools/photo-extraction`.
 6. If you add a component or token, document it in this file in the same table/section format.
 
 ---

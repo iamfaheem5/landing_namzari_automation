@@ -1,0 +1,93 @@
+---
+import Base from "../layouts/Base.astro";
+
+const tools = [
+  {
+    number: "01",
+    icon: "▧",
+    title: "Photo extraction & resizing",
+    description: "Extract photos from documents and resize them for namjari abedon uploads, with the dimensions and file size the portal expects.",
+    href: "/tools/photo-extraction",
+  },
+  {
+    number: "02",
+    icon: "▤",
+    title: "PDF compression",
+    description: "Reduce deed, khatian, and supporting-document PDFs to upload-ready files while keeping Bangla text and stamps readable.",
+  },
+  {
+    number: "03",
+    icon: "◎",
+    title: "NID text extraction",
+    description: "Extract names, NID numbers, dates of birth, and addresses from NID images into structured text for faster application prep.",
+  },
+];
+---
+
+<Base
+  title="Document Tools — Mutation Automation"
+  description="Practical document tools for namjari applications: photo extraction and resizing, PDF compression, and NID text extraction."
+>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="/"><span class="brand-mark">M</span> Mutation Automation</a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="/#product">Product</a>
+        <a href="/tools" aria-current="page">Tools</a>
+        <a href="/#bugs">Bug map</a>
+        <a href="/#how">How it works</a>
+        <a href="/#experience">Experience</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a class="btn btn-sm-glass" href="/#contact">Talk to us</a>
+        <a class="btn btn-filled" href="/#contact">Automate mutation →</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">Document tools</div>
+          <h1 class="display-md">Less document prep. More filing.</h1>
+          <p class="body-lg">Focused utilities for the files behind every namjari abedon. These tools are in development and will be available here soon.</p>
+        </div>
+
+        <div class="grid-3">
+          {tools.map((tool) => (
+            <article class="card tool-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div class="icon" aria-hidden="true">{tool.icon}</div>
+                <span class="step-num code">{tool.number}</span>
+              </div>
+              <h2>{tool.title}</h2>
+              <p>{tool.description}</p>
+              <div class="tool-status">
+                {tool.href
+                  ? <a class="btn btn-filled" href={tool.href}>Open tool →</a>
+                  : <span class="pill pill-warn">Coming soon</span>}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <p class="body-md muted" style="margin:24px 0 0">Need help preparing documents now? <a href="https://wa.me/8801400133142" style="color:var(--ink);text-decoration:underline;text-underline-offset:4px">Message us on WhatsApp</a>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container foot-grid">
+      <div>
+        <a class="brand" href="/"><span class="brand-mark">M</span> Mutation Automation</a>
+        <br /><small>5 years on mutation.land.gov.bd.<br />Every bug known. Every workaround coded.<br />Dhaka, Bangladesh.</small>
+      </div>
+      <div class="foot-links">
+        <a href="/#product">Product</a><a href="/tools" aria-current="page">Tools</a><a href="/#bugs">Bug map</a><a href="/#how">How it works</a><a href="/#contact">Contact</a>
+      </div>
+    </div>
+    <div class="container" style="margin-top:24px"><small style="color:var(--faint);font-size:12px">© 2026 Mutation Automation. নামজারি automation for land.gov.bd.</small></div>
+  </footer>
+</Base>

@@ -1,0 +1,303 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+
+<Base
+  title="NID Photo Extraction — Mutation Automation"
+  description="Extract NID portraits privately in your browser. Automatically crop, orient, and resize photos to 300 × 300 pixels under 300 KB."
+>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="/"><span class="brand-mark">M</span> Mutation Automation</a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="/#product">Product</a>
+        <a href="/tools" aria-current="page">Tools</a>
+        <a href="/#bugs">Bug map</a>
+        <a href="/#how">How it works</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+      <a class="btn btn-sm-glass" href="/tools">← All tools</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="tool-page">
+      <div class="container tool-container">
+        <a class="back-link" href="/tools">← Document tools</a>
+        <div class="section-head" style="margin:24px 0 32px">
+          <div class="eyebrow">Private · on-device processing</div>
+          <h1 class="display-md">NID photos, ready to upload.</h1>
+          <p class="body-lg">Drop an NID scan or photo. We’ll find the portrait, correct its orientation, and export a 300 × 300 px JPEG under 300 KB.</p>
+        </div>
+
+        <div class="extractor-layout">
+          <div class="card upload-panel">
+            <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden />
+            <label id="drop-zone" class="drop-zone" for="file-input">
+              <span class="upload-icon" aria-hidden="true">↑</span>
+              <strong>Drop NID images here</strong>
+              <span>or click to choose files</span>
+              <small>JPG, PNG or WebP · multiple files supported</small>
+            </label>
+            <div class="privacy-note"><span aria-hidden="true">◇</span> Your images never leave this device.</div>
+          </div>
+
+          <aside class="card export-spec">
+            <div class="eyebrow" style="margin:0">Export settings</div>
+            <div class="spec-row"><span>Dimensions</span><b class="code">300 × 300 px</b></div>
+            <div class="spec-row"><span>Format</span><b class="code">JPEG</b></div>
+            <div class="spec-row"><span>Maximum size</span><b class="code">300 KB</b></div>
+            <div class="spec-row"><span>Background</span><b>Original</b></div>
+            <p style="margin-top:16px">Portrait is centered with natural headroom. Nothing is stretched.</p>
+          </aside>
+        </div>
+
+        <div id="status" class="tool-message" role="status" aria-live="polite" hidden></div>
+        <div id="results" class="results" aria-live="polite"></div>
+        <div id="batch-actions" class="batch-actions" hidden>
+          <span id="result-count" class="body-md muted"></span>
+          <button id="download-all" class="btn btn-filled" type="button">Download all ↓</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container foot-grid">
+      <div>
+        <a class="brand" href="/"><span class="brand-mark">M</span> Mutation Automation</a>
+        <br /><small>Document utilities for namjari filing.<br />Processed locally. Never uploaded.</small>
+      </div>
+      <div class="foot-links"><a href="/tools">All tools</a><a href="/#contact">Contact</a></div>
+    </div>
+  </footer>
+
+  <script src="/opencv.js" is:inline></script>
+  <script>
+    const input = document.querySelector("#file-input");
+    const dropZone = document.querySelector("#drop-zone");
+    const results = document.querySelector("#results");
+    const status = document.querySelector("#status");
+    const batchActions = document.querySelector("#batch-actions");
+    const resultCount = document.querySelector("#result-count");
+    const downloadAll = document.querySelector("#download-all");
+    let cvReady;
+    const downloads = [];
+
+    function showStatus(message, persistent = false) {
+      status.textContent = message;
+      status.hidden = false;
+      if (!persistent) setTimeout(() => { status.hidden = true; }, 5000);
+    }
+
+    async function getCv() {
+      if (!cvReady) {
+        cvReady = (async () => {
+          const cv = await window.cv;
+          const response = await fetch("/face_detection_yunet.onnx");
+          if (!response.ok) throw new Error("Could not load the portrait detector.");
+          cv.FS_createDataFile("/", "face.onnx", new Uint8Array(await response.arrayBuffer()), true, false, false);
+          return cv;
+        })();
+      }
+      return cvReady;
+    }
+
+    function loadImage(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
+        image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("This image could not be read.")); };
+        image.src = url;
+      });
+    }
+
+    function sourceCanvas(image, maxSize = 1400) {
+      const canvas = document.createElement("canvas");
+      const imageWidth = image.naturalWidth || image.width;
+      const imageHeight = image.naturalHeight || image.height;
+      const scale = Math.min(1, maxSize / Math.max(imageWidth, imageHeight));
+      canvas.width = Math.round(imageWidth * scale);
+      canvas.height = Math.round(imageHeight * scale);
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+      return { canvas, scale };
+    }
+
+    function detectFaces(cv, canvas) {
+      const src = cv.imread(canvas);
+      const faces = new cv.Mat();
+      const detector = new cv.FaceDetectorYN("face.onnx", "", new cv.Size(canvas.width, canvas.height), 0.55, 0.3, 5000);
+      try {
+        detector.detect(src, faces);
+        return Array.from({ length: faces.rows }, (_, i) => {
+          const offset = i * 15;
+          return {
+            x: faces.data32F[offset], y: faces.data32F[offset + 1], width: faces.data32F[offset + 2], height: faces.data32F[offset + 3],
+            eyeAngle: Math.atan2(faces.data32F[offset + 7] - faces.data32F[offset + 5], faces.data32F[offset + 6] - faces.data32F[offset + 4]),
+          };
+        });
+      } finally {
+        src.delete(); faces.delete(); detector.delete();
+      }
+    }
+
+    function orientedDetection(cv, image) {
+      const rotations = [0, 90, 270, 180];
+      for (const rotation of rotations) {
+        const rotated = document.createElement("canvas");
+        const swap = rotation % 180 !== 0;
+        rotated.width = swap ? image.naturalHeight : image.naturalWidth;
+        rotated.height = swap ? image.naturalWidth : image.naturalHeight;
+        const context = rotated.getContext("2d");
+        context.translate(rotated.width / 2, rotated.height / 2);
+        context.rotate(rotation * Math.PI / 180);
+        context.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+        const { canvas, scale } = sourceCanvas(rotated);
+        const faces = detectFaces(cv, canvas);
+        if (faces.length) {
+          const face = faces.sort((a, b) => b.width * b.height - a.width * a.height)[0];
+          return { canvas: rotated, face, scale, rotation };
+        }
+      }
+      return null;
+    }
+
+    function makePortrait(image) {
+      const detection = orientedDetection(window.cvModule, image);
+      if (!detection) throw new Error("No portrait found. Try a sharper, upright NID image.");
+      const { canvas, face, scale, rotation } = detection;
+      const x = face.x / scale;
+      const y = face.y / scale;
+      const width = face.width / scale;
+      const height = face.height / scale;
+      const side = Math.max(width * 1.65, height * 1.65);
+      const centerX = x + width / 2;
+      const centerY = y + height * 0.57;
+      const sx = Math.max(0, Math.min(canvas.width - side, centerX - side / 2));
+      const sy = Math.max(0, Math.min(canvas.height - side, centerY - side / 2));
+      const output = document.createElement("canvas");
+      output.width = 300;
+      output.height = 300;
+      const context = output.getContext("2d");
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.fillStyle = "#fff";
+      context.fillRect(0, 0, 300, 300);
+      context.drawImage(canvas, sx, sy, side, side, 0, 0, 300, 300);
+      if (Math.abs(face.eyeAngle) < Math.PI / 6) {
+        const straightened = document.createElement("canvas");
+        straightened.width = straightened.height = 300;
+        const straightContext = straightened.getContext("2d");
+        straightContext.fillStyle = "#fff";
+        straightContext.fillRect(0, 0, 300, 300);
+        straightContext.translate(150, 150);
+        straightContext.rotate(-face.eyeAngle);
+        straightContext.drawImage(output, -150, -150);
+        context.fillStyle = "#fff";
+        context.fillRect(0, 0, 300, 300);
+        context.drawImage(straightened, 0, 0);
+      }
+      return { output, rotation };
+    }
+
+    function canvasBlob(canvas, quality) {
+      return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    }
+
+    async function compressedBlob(canvas) {
+      let blob = await canvasBlob(canvas, 0.9);
+      for (const quality of [0.82, 0.74, 0.66, 0.58, 0.5]) {
+        if (blob.size <= 300 * 1024) break;
+        blob = await canvasBlob(canvas, quality);
+      }
+      return blob;
+    }
+
+    function addResult(file, portrait, blob) {
+      const item = document.createElement("article");
+      item.className = "card result-card";
+      const url = URL.createObjectURL(blob);
+      const name = file.name.replace(/\.[^.]+$/, "") + "-300x300.jpg";
+      const size = (blob.size / 1024).toFixed(1);
+      item.innerHTML = `
+        <div class="result-preview"><img src="${url}" alt="Extracted portrait from ${file.name.replace(/["<>]/g, "")}" width="300" height="300"></div>
+        <div class="result-info">
+          <span class="pill pill-ok">Ready</span>
+          <h2>Portrait extracted</h2>
+          <p>${file.name.replace(/[<>&]/g, "")}</p>
+          <div class="result-meta code"><span>300 × 300 px</span><span>${size} KB</span></div>
+          <div class="result-buttons">
+            <button class="btn btn-sm-glass rotate-button" type="button">↻ Rotate</button>
+            <a class="btn btn-filled" href="${url}" download="${name.replace(/["<>]/g, "")}">Download ↓</a>
+          </div>
+        </div>`;
+      const download = item.querySelector("a");
+      downloads.push(download);
+      item.querySelector(".rotate-button").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        const rotated = document.createElement("canvas");
+        rotated.width = rotated.height = 300;
+        const context = rotated.getContext("2d");
+        context.translate(150, 150);
+        context.rotate(Math.PI / 2);
+        context.drawImage(portrait, -150, -150);
+        const nextBlob = await compressedBlob(rotated);
+        const nextUrl = URL.createObjectURL(nextBlob);
+        portrait.width = portrait.height = 300;
+        portrait.getContext("2d").drawImage(rotated, 0, 0);
+        item.querySelector("img").src = nextUrl;
+        download.href = nextUrl;
+        item.querySelector(".result-meta span:last-child").textContent = `${(nextBlob.size / 1024).toFixed(1)} KB`;
+        URL.revokeObjectURL(url);
+        button.disabled = false;
+      });
+      results.appendChild(item);
+    }
+
+    async function processFiles(fileList) {
+      const files = Array.from(fileList).filter((file) => file.type.startsWith("image/"));
+      if (!files.length) return showStatus("Choose JPG, PNG, or WebP images.");
+      results.innerHTML = "";
+      downloads.length = 0;
+      batchActions.hidden = true;
+      showStatus("Loading the on-device portrait detector…", true);
+      try {
+        window.cvModule = await getCv();
+      } catch {
+        return showStatus("The portrait detector could not start. Refresh and try again.");
+      }
+      let completed = 0;
+      for (const file of files) {
+        showStatus(`Finding portrait ${completed + 1} of ${files.length}…`, true);
+        try {
+          const image = await loadImage(file);
+          const { output } = makePortrait(image);
+          const blob = await compressedBlob(output);
+          addResult(file, output, blob);
+        } catch (error) {
+          const item = document.createElement("div");
+          item.className = "tool-message";
+          item.textContent = `${file.name}: ${error.message || "Portrait extraction failed."}`;
+          results.appendChild(item);
+        }
+        completed++;
+      }
+      status.hidden = true;
+      resultCount.textContent = `${downloads.length} ${downloads.length === 1 ? "photo" : "photos"} ready`;
+      batchActions.hidden = downloads.length === 0;
+      input.value = "";
+    }
+
+    input.addEventListener("change", () => processFiles(input.files));
+    ["dragenter", "dragover"].forEach((event) => dropZone.addEventListener(event, (e) => {
+      e.preventDefault(); dropZone.classList.add("is-dragging");
+    }));
+    ["dragleave", "drop"].forEach((event) => dropZone.addEventListener(event, (e) => {
+      e.preventDefault(); dropZone.classList.remove("is-dragging");
+    }));
+    dropZone.addEventListener("drop", (event) => processFiles(event.dataTransfer.files));
+    downloadAll.addEventListener("click", () => downloads.forEach((link, index) => setTimeout(() => link.click(), index * 250)));
+  </script>
+</Base>
