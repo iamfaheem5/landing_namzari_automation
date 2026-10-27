@@ -4,6 +4,8 @@ Astro-based landing page for **Mutation Automation** — automation for governme
 
 Built with a Linear-inspired dark design system (`#08090A` canvas, pill buttons, Inter).
 
+See [`design.md`](./design.md) for the design contract and consistency rules.
+
 ## Dev
 
 ```sh
