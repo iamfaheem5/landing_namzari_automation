@@ -6,7 +6,7 @@
 > If a new element is not covered here, extend the existing tokens and patterns — do **not**
 > introduce a new palette, font, shadow style, or corner radius language.
 
-- **Stack:** Astro 4 (static output), plain global CSS, no UI framework, no CSS-in-JS.
+- **Stack:** Astro 4 (hybrid output: static pages plus a Node API route), plain global CSS, no UI framework, no CSS-in-JS.
 - **Source of truth:** `src/styles/global.css` (tokens + components), `src/pages/index.astro` (sections), `src/layouts/Base.astro` (head/fonts).
 - **Brand name:** Mutation Automation
 - **Contact (live):** WhatsApp `01400133142` → `https://wa.me/8801400133142`; email `contact@nazariautomation.xyz`
@@ -79,6 +79,7 @@ status color, add a documented semantic extension here first.
 
 **Family:** Inter Variable (loaded from Google Fonts in `Base.astro` with `opsz,wght@14..32,300..700`).
 Fallback stack: `Inter, system-ui, -apple-system, "Segoe UI", sans-serif`.
+**Bengali:** Noto Sans Bengali 400/500/600, applied to `[lang="bn"]` for extracted NID text.
 **Mono:** `Berkeley Mono, "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace`
 (JetBrains Mono is loaded as the practical fallback; apply via `.code`).
 
@@ -186,8 +187,12 @@ Cards are **not** links currently; if made clickable, hover should be a border b
 
 Tool cards (`.tool-card`) use a 240px minimum height, 20px/590 `h2` title, and a bottom-aligned
 monochrome "Coming soon" pill until the individual tool is available. Available tools use the filled
-"Open tool" button. The NID extractor uses a dashed upload dropzone, compact export-spec panel,
+"Open tool" button. The NID photo extractor uses a dashed upload dropzone, compact export-spec panel,
 2-column result cards, and local OpenCV/YuNet processing; exports are 300×300 JPEGs under 300 KB.
+The NID text extractor uses the same upload shell with a preview, an extract action, a privacy note,
+and a full-width results card. Its `dl` grid holds seven fields — name in Bengali and English,
+parents’ names, address, date of birth, and NID number; Bengali values use Noto Sans Bengali.
+The server sends the image to Gemini for verbatim OCR, then sends that transcript to ScaleDown Extract.
 
 ### Section head
 
@@ -307,9 +312,11 @@ src/
   pages/index.astro       # landing page sections in narrative order
   pages/tools.astro       # document tools directory
   pages/tools/photo-extraction.astro # private NID portrait extractor
+  pages/tools/nid-extraction.astro   # NID field extraction interface
+  pages/api/nid-extract.ts           # server-only OCR + ScaleDown endpoint
   styles/global.css       # tokens + all component classes
 public/favicon.svg        # white circle "M" mark
-astro.config.mjs          # static output
+astro.config.mjs          # hybrid output with Node adapter
 ```
 
 Before committing a change:
@@ -319,7 +326,7 @@ Before committing a change:
 3. Keep contact details exactly: WhatsApp `01400133142` / `https://wa.me/8801400133142`,
    email `contact@nazariautomation.xyz`.
 4. Keep the "not affiliated" disclaimer on marketing pages.
-5. Run `npm run build` — must complete with the static routes `/`, `/tools`, and `/tools/photo-extraction`.
+5. Run `npm run build` — must complete with the static routes `/`, `/tools`, `/tools/photo-extraction`, and `/tools/nid-extraction`.
 6. If you add a component or token, document it in this file in the same table/section format.
 
 ---

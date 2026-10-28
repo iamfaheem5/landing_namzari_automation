@@ -4,11 +4,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "astro dev",
+    "dev": "node --env-file-if-exists=.env.local ./node_modules/astro/astro.js dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "start": "node --env-file-if-exists=.env.local ./dist/server/entry.mjs"
   },
   "dependencies": {
+    "@astrojs/node": "^8.3.4",
     "@techstark/opencv-js": "^5.0.0-release.1",
     "astro": "^4.16.0"
   }

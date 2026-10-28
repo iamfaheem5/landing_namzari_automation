@@ -1,0 +1,312 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+
+<Base
+  title="NID Text Extraction — Mutation Automation"
+  description="Extract Bengali and English names, parents' names, address, date of birth, and NID number from Bangladesh NID images."
+>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="/"><span class="brand-mark">M</span> Mutation Automation</a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="/#product">Product</a>
+        <a href="/tools" aria-current="page">Tools</a>
+        <a href="/#bugs">Bug map</a>
+        <a href="/#how">How it works</a>
+        <a href="/#experience">Experience</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+      <a class="btn btn-sm-glass" href="/tools">← All tools</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="tool-page">
+      <div class="container tool-container">
+        <a class="back-link" href="/tools">← Document tools</a>
+        <div class="section-head" style="margin:24px 0 32px">
+          <div class="eyebrow">Bengali + English · AI extraction</div>
+          <h1 class="display-md">NID details, ready to use.</h1>
+          <p class="body-lg">Upload a clear NID photo or scan. Extract the cardholder’s name in Bengali and English, parents’ names, address, date of birth, and NID number.</p>
+        </div>
+
+        <div class="extractor-layout">
+          <div class="card upload-panel">
+            <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+            <label id="drop-zone" class="drop-zone" for="file-input">
+              <span class="upload-icon" aria-hidden="true">↑</span>
+              <strong>Drop an NID image here</strong>
+              <span>or click to choose a file</span>
+              <small>JPG, PNG or WebP · up to 10 MB · both sides in one image works best</small>
+            </label>
+
+            <div id="selected-file" class="nid-selected" hidden>
+              <img id="image-preview" class="nid-preview" alt="Selected NID preview" />
+              <div class="nid-file-meta">
+                <div>
+                  <strong id="file-name"></strong>
+                  <span id="file-size" class="code"></span>
+                </div>
+                <button id="clear-file" class="btn btn-sm-glass" type="button">Choose another</button>
+              </div>
+            </div>
+
+            <button id="extract-button" class="btn btn-filled btn-lg nid-extract-button" type="button" disabled>Extract NID details</button>
+            <div class="privacy-note"><span aria-hidden="true">◇</span> Images are processed by Gemini and ScaleDown through OpenRouter. This site does not save them.</div>
+          </div>
+
+          <aside class="card export-spec">
+            <div class="eyebrow" style="margin:0">Extracted fields</div>
+            <div class="spec-row"><span>Name</span><b>Bengali + English</b></div>
+            <div class="spec-row"><span>Father’s name</span><b>Bengali</b></div>
+            <div class="spec-row"><span>Mother’s name</span><b>Bengali</b></div>
+            <div class="spec-row"><span>Address</span><b>Bengali</b></div>
+            <div class="spec-row"><span>Date of birth</span><b>As printed</b></div>
+            <div class="spec-row"><span>NID number</span><b>As printed</b></div>
+            <p style="margin-top:16px">A sharp, well-lit photo keeps Bengali spelling exact. Include the back of the NID in the same image for the most accurate address.</p>
+          </aside>
+        </div>
+
+        <div id="status" class="tool-message" role="status" aria-live="polite" hidden></div>
+
+        <div id="results-panel" class="card nid-results" hidden>
+          <div class="nid-results-head">
+            <div>
+              <span class="pill pill-ok">Extraction complete</span>
+              <h2>Extracted details</h2>
+              <p>Check every field against the original NID before using it.</p>
+            </div>
+            <div class="result-buttons">
+              <button id="copy-results" class="btn btn-sm-glass" type="button">Copy all</button>
+              <button id="download-results" class="btn btn-sm-glass" type="button">Download JSON ↓</button>
+            </div>
+          </div>
+
+          <dl class="nid-fields">
+            <div class="nid-field">
+              <dt>Name <span lang="bn">(নাম)</span></dt>
+              <dd id="result-name-bengali" lang="bn" dir="auto"></dd>
+            </div>
+            <div class="nid-field">
+              <dt>Name (English)</dt>
+              <dd id="result-name-english" dir="auto"></dd>
+            </div>
+            <div class="nid-field">
+              <dt>Father’s name <span lang="bn">(পিতা)</span></dt>
+              <dd id="result-father-name" lang="bn" dir="auto"></dd>
+            </div>
+            <div class="nid-field">
+              <dt>Mother’s name <span lang="bn">(মাতা)</span></dt>
+              <dd id="result-mother-name" lang="bn" dir="auto"></dd>
+            </div>
+            <div class="nid-field">
+              <dt>Date of birth</dt>
+              <dd id="result-date-of-birth"></dd>
+            </div>
+            <div class="nid-field">
+              <dt>NID number</dt>
+              <dd id="result-nid-number" class="code"></dd>
+            </div>
+            <div class="nid-field nid-field-wide">
+              <dt>Address <span lang="bn">(ঠিকানা)</span></dt>
+              <dd id="result-address" lang="bn" dir="auto"></dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container foot-grid">
+      <div>
+        <a class="brand" href="/"><span class="brand-mark">M</span> Mutation Automation</a>
+        <br /><small>Document utilities for namjari filing.<br />Verify extracted details against the original document.</small>
+      </div>
+      <div class="foot-links"><a href="/tools">All tools</a><a href="/#contact">Contact</a></div>
+    </div>
+  </footer>
+
+  <script>
+    type NidFields = {
+      name_bengali: string;
+      name_english: string;
+      father_name: string;
+      mother_name: string;
+      address: string;
+      date_of_birth: string;
+      nid_number: string;
+    };
+
+    const input = document.querySelector<HTMLInputElement>("#file-input")!;
+    const dropZone = document.querySelector<HTMLLabelElement>("#drop-zone")!;
+    const selectedFilePanel = document.querySelector<HTMLDivElement>("#selected-file")!;
+    const preview = document.querySelector<HTMLImageElement>("#image-preview")!;
+    const fileName = document.querySelector<HTMLElement>("#file-name")!;
+    const fileSize = document.querySelector<HTMLElement>("#file-size")!;
+    const clearButton = document.querySelector<HTMLButtonElement>("#clear-file")!;
+    const extractButton = document.querySelector<HTMLButtonElement>("#extract-button")!;
+    const status = document.querySelector<HTMLDivElement>("#status")!;
+    const resultsPanel = document.querySelector<HTMLDivElement>("#results-panel")!;
+    const copyButton = document.querySelector<HTMLButtonElement>("#copy-results")!;
+    const downloadButton = document.querySelector<HTMLButtonElement>("#download-results")!;
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    const maxFileBytes = 10 * 1024 * 1024;
+    let selectedFile: File | null = null;
+    let previewUrl = "";
+    let extractedData: NidFields | null = null;
+
+    const resultElements: Record<keyof NidFields, HTMLElement> = {
+      name_bengali: document.querySelector("#result-name-bengali")!,
+      name_english: document.querySelector("#result-name-english")!,
+      father_name: document.querySelector("#result-father-name")!,
+      mother_name: document.querySelector("#result-mother-name")!,
+      address: document.querySelector("#result-address")!,
+      date_of_birth: document.querySelector("#result-date-of-birth")!,
+      nid_number: document.querySelector("#result-nid-number")!,
+    };
+
+    const resultLabels: Record<keyof NidFields, string> = {
+      name_bengali: "Name (Bengali)",
+      name_english: "Name (English)",
+      father_name: "Father's name",
+      mother_name: "Mother's name",
+      address: "Address",
+      date_of_birth: "Date of birth",
+      nid_number: "NID number",
+    };
+
+    function showStatus(message: string, isError = false) {
+      status.textContent = message;
+      status.hidden = false;
+      status.classList.toggle("tool-message-error", isError);
+      status.setAttribute("role", isError ? "alert" : "status");
+    }
+
+    function clearResults() {
+      extractedData = null;
+      resultsPanel.hidden = true;
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      input.value = "";
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = "";
+      preview.removeAttribute("src");
+      selectedFilePanel.hidden = true;
+      dropZone.hidden = false;
+      extractButton.disabled = true;
+      clearResults();
+      status.hidden = true;
+    }
+
+    function selectFile(file?: File) {
+      if (!file) return;
+      if (!allowedTypes.has(file.type)) {
+        showStatus("Choose a JPG, PNG, or WebP image.", true);
+        return;
+      }
+      if (file.size > maxFileBytes) {
+        showStatus("Choose an image smaller than 10 MB.", true);
+        return;
+      }
+      if (file.size === 0) {
+        showStatus("The selected image is empty.", true);
+        return;
+      }
+
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      selectedFile = file;
+      previewUrl = URL.createObjectURL(file);
+      preview.src = previewUrl;
+      fileName.textContent = file.name;
+      fileSize.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+      dropZone.hidden = true;
+      selectedFilePanel.hidden = false;
+      extractButton.disabled = false;
+      clearResults();
+      status.hidden = true;
+    }
+
+    function renderResults(data: NidFields) {
+      extractedData = data;
+      for (const [field, element] of Object.entries(resultElements) as Array<[keyof NidFields, HTMLElement]>) {
+        element.textContent = data[field] || "Not detected";
+        element.classList.toggle("nid-missing", !data[field]);
+      }
+      resultsPanel.hidden = false;
+      resultsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    async function extract() {
+      if (!selectedFile) return;
+      extractButton.disabled = true;
+      clearButton.disabled = true;
+      extractButton.textContent = "Extracting…";
+      extractButton.setAttribute("aria-busy", "true");
+      clearResults();
+      showStatus("Reading the NID and extracting Bengali and English fields. This may take a moment.");
+
+      const body = new FormData();
+      body.append("image", selectedFile);
+
+      try {
+        const response = await fetch("/api/nid-extract", { method: "POST", body });
+        const result = await response.json().catch(() => null) as { data?: NidFields; error?: string } | null;
+        if (!response.ok || !result?.data) {
+          throw new Error(result?.error || "Extraction failed. Please try again.");
+        }
+        renderResults(result.data);
+        status.hidden = true;
+      } catch (error) {
+        showStatus(error instanceof Error ? error.message : "Extraction failed. Please try again.", true);
+      } finally {
+        extractButton.disabled = false;
+        clearButton.disabled = false;
+        extractButton.textContent = "Extract NID details";
+        extractButton.removeAttribute("aria-busy");
+      }
+    }
+
+    input.addEventListener("change", () => selectFile(input.files?.[0]));
+    clearButton.addEventListener("click", clearFile);
+    extractButton.addEventListener("click", extract);
+
+    ["dragenter", "dragover"].forEach((eventName) => dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropZone.classList.add("is-dragging");
+    }));
+    ["dragleave", "drop"].forEach((eventName) => dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropZone.classList.remove("is-dragging");
+    }));
+    dropZone.addEventListener("drop", (event) => selectFile(event.dataTransfer?.files[0]));
+
+    copyButton.addEventListener("click", async () => {
+      if (!extractedData) return;
+      const text = (Object.keys(resultLabels) as Array<keyof NidFields>)
+        .map((field) => `${resultLabels[field]}: ${extractedData![field] || "Not detected"}`)
+        .join("\n");
+      try {
+        await navigator.clipboard.writeText(text);
+        copyButton.textContent = "Copied";
+        setTimeout(() => { copyButton.textContent = "Copy all"; }, 2000);
+      } catch {
+        showStatus("Could not access the clipboard. Try downloading the JSON instead.", true);
+      }
+    });
+
+    downloadButton.addEventListener("click", () => {
+      if (!extractedData || !selectedFile) return;
+      const blob = new Blob([JSON.stringify(extractedData, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${selectedFile.name.replace(/\.[^.]+$/, "")}-extracted.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</Base>
