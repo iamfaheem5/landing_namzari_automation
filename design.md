@@ -193,6 +193,18 @@ The NID text extractor uses the same upload shell with a preview, an extract act
 and a full-width results card. Its `dl` grid holds seven fields — name in Bengali and English,
 parents’ names, address, date of birth, and NID number; Bengali values use Noto Sans Bengali.
 The server sends the image to Gemini for verbatim OCR, then sends that transcript to ScaleDown Extract.
+The NID merge tool uses two editor cards side by side (stacked ≤900px). Each dashed dropzone becomes a
+canvas crop editor: an 8-handle crop box with a dimmed surround, rotate-left/right, horizontal flip, a
+reset action, a ±20° straighten slider that redraws the card on white, and an Auto crop action. Auto
+crop runs on-device: the image is downsampled to 560px, the card is segmented by Otsu threshold plus the
+largest connected component (with a Sobel-edge hull fallback), a min-area rectangle is fitted and refined
+by perimeter gradient, and the edges are snapped then trimmed against the background colour; the detected
+angle is applied to the straighten slider and the crop box. A Combine sides button (enabled once a side is
+loaded) builds the sheet and scrolls to it; further crop or straighten edits refresh that sheet live.
+Export lays the crops out front-first on an A4 portrait page (210×297 mm, 20 mm side margins, 12 mm gap,
+16 mm minimum vertical margin), previews that page at 1200px wide, and downloads either an A4 JPEG or a
+jsPDF-generated A4 PDF.
+All processing is on-device.
 
 ### Section head
 
@@ -313,6 +325,7 @@ src/
   pages/tools.astro       # document tools directory
   pages/tools/photo-extraction.astro # private NID portrait extractor
   pages/tools/nid-extraction.astro   # NID field extraction interface
+  pages/tools/nid-merge.astro        # NID front/back merge, crop and rotate
   pages/api/nid-extract.ts           # server-only OCR + ScaleDown endpoint
   styles/global.css       # tokens + all component classes
 public/favicon.svg        # white circle "M" mark
@@ -326,7 +339,7 @@ Before committing a change:
 3. Keep contact details exactly: WhatsApp `01400133142` / `https://wa.me/8801400133142`,
    email `contact@nazariautomation.xyz`.
 4. Keep the "not affiliated" disclaimer on marketing pages.
-5. Run `npm run build` — must complete with the static routes `/`, `/tools`, `/tools/photo-extraction`, and `/tools/nid-extraction`.
+5. Run `npm run build` — must complete with the static routes `/`, `/tools`, `/tools/photo-extraction`, `/tools/nid-extraction`, and `/tools/nid-merge`.
 6. If you add a component or token, document it in this file in the same table/section format.
 
 ---

@@ -12,6 +12,7 @@
   "dependencies": {
     "@astrojs/node": "^8.3.4",
     "@techstark/opencv-js": "^5.0.0-release.1",
-    "astro": "^4.16.0"
+    "astro": "^4.16.0",
+    "jspdf": "^4.2.1"
   }
 }
